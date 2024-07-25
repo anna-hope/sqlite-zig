@@ -1,13 +1,15 @@
 const std = @import("std");
 const io = @import("io.zig");
+const parser = @import("parser.zig");
+
+fn executeStatement(statement: parser.Statement) void {
+    switch (statement.statement_type) {
+        .insert => std.debug.print("This is where we would do an insert.\n", .{}),
+        .select => std.debug.print("This is where we would do a select.\n", .{}),
+    }
+}
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    // std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
-
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
@@ -20,23 +22,41 @@ pub fn main() !void {
 
     while (true) {
         try io.printPrompt();
-        const maybe_buf = try io.readInput(allocator);
+        const maybe_input_buf = try io.readInput(allocator);
 
-        if (maybe_buf) |buf| {
-            defer allocator.free(buf);
+        if (maybe_input_buf) |input_buf| {
+            defer allocator.free(input_buf);
 
-            if (std.mem.eql(u8, buf, ".exit")) {
-                break;
-            } else if (buf.len == 0) {
+            if (input_buf.len == 0) {
                 continue;
-            } else {
-                try stdout.print("Unrecognized command: {s}.\n", .{buf});
+            } else if (input_buf[0] == '.') {
+                if (std.mem.eql(u8, input_buf, ".exit")) break;
+
+                parser.processMetaCommand(input_buf) catch {
+                    try stdout.print("Unrecognized command: '{s}'\n", .{input_buf});
+                    try bw.flush();
+                };
+
+                continue;
             }
+
+            const maybe_statement = parser.Statement.parse(input_buf) catch |err| blk: {
+                switch (err) {
+                    error.Unrecognized => {
+                        try stdout.print("Unrecognized keyword at start of '{s}'.\n", .{input_buf});
+                        break :blk null;
+                    },
+                }
+            };
+
+            if (maybe_statement) |statement| {
+                executeStatement(statement);
+                try stdout.print("Executed.\n", .{});
+            }
+
             try bw.flush();
         }
     }
-
-    // try stdout.print("Run `zig build test` to run the tests.\n", .{});
 
     try bw.flush(); // don't forget to flush!
 }
