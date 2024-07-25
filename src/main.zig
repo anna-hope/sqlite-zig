@@ -27,6 +27,8 @@ pub fn main() !void {
 
             if (std.mem.eql(u8, buf, ".exit")) {
                 break;
+            } else if (buf.len == 0) {
+                continue;
             } else {
                 try stdout.print("Unrecognized command: {s}.\n", .{buf});
             }
