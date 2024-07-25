@@ -27,9 +27,7 @@ pub fn main() !void {
         if (maybe_input_buf) |input_buf| {
             defer allocator.free(input_buf);
 
-            if (input_buf.len == 0) {
-                continue;
-            } else if (input_buf[0] == '.') {
+            if (input_buf.len == 0) continue else if (input_buf[0] == '.') {
                 if (std.mem.eql(u8, input_buf, ".exit")) break;
 
                 parser.processMetaCommand(input_buf) catch {
