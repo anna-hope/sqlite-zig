@@ -27,37 +27,63 @@ pub const StatementTypeTag = enum {
     select,
 };
 
-pub const StatementType = union(StatementTypeTag) {
-    insert: InsertStement,
-    select: void,
-};
+// pub const Statement = union(StatementTypeTag) {
+//     insert: InsertStement,
+//     select: void,
+
+//     const Self = @This();
+
+// };
 
 pub const StatementParseError = error{
     Unrecognized,
-    Invalid,
+    Syntax,
 };
 
-pub const Statement = struct {
-    const Self = @This();
-    statement_type: StatementType,
+pub const Statement = union(StatementTypeTag) {
+    insert: InsertStement,
+    select: void,
 
-    pub fn parse(buf: []u8, allocator: Allocator) StatementParseError!Self {
+    const Self = @This();
+
+    pub fn parse(buf: []u8) !Self {
         if (std.mem.startsWith(u8, buf, "insert")) {
-            const tokens = std.mem.splitScalar(u8, buf, ' ');
+            var tokens = std.mem.splitScalar(u8, buf, ' ');
+
             const maybe_keyword = tokens.next();
             if (maybe_keyword) |keyword| {
                 if (!std.mem.eql(u8, keyword, "insert")) {
-                    return error.Invalid;
+                    return error.Unrecognized;
                 }
             }
 
-            const row_id: u32 = undefined;
-            const username = try allocator.alloc(u8, 32);
-            const email = try allocator.alloc(u8, 255);
+            const row_id = try blk: {
+                const maybe_row_id_buf = tokens.next();
+                if (maybe_row_id_buf) |row_id_buf| {
+                    break :blk std.fmt.parseInt(u32, row_id_buf, 10);
+                }
+                return StatementParseError.Syntax;
+            };
 
-            return Self{ .statement_type = .insert };
+            var username: [username_size]u8 = undefined;
+            if (tokens.next()) |username_buf| {
+                std.mem.copyBackwards(u8, &username, username_buf);
+            } else {
+                return error.Syntax;
+            }
+
+            var email: [email_size]u8 = undefined;
+            if (tokens.next()) |email_buf| {
+                std.mem.copyBackwards(u8, &email, email_buf);
+            } else {
+                return error.Syntax;
+            }
+
+            const insert = InsertStement{ .row = Row{ .id = row_id, .username = username, .email = email } };
+
+            return Self{ .insert = insert };
         } else if (std.mem.startsWith(u8, buf, "select")) {
-            return Self{ .statement_type = .select };
+            return Self{ .select = undefined };
         }
 
         return error.Unrecognized;

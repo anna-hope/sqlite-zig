@@ -3,7 +3,7 @@ const io = @import("io.zig");
 const parser = @import("parser.zig");
 
 fn executeStatement(statement: parser.Statement) void {
-    switch (statement.statement_type) {
+    switch (statement) {
         .insert => std.debug.print("This is where we would do an insert.\n", .{}),
         .select => std.debug.print("This is where we would do a select.\n", .{}),
     }
@@ -42,9 +42,12 @@ pub fn main() !void {
                 switch (err) {
                     error.Unrecognized => {
                         try stdout.print("Unrecognized keyword at start of '{s}'.\n", .{input_buf});
-                        break :blk null;
+                    },
+                    error.Syntax, error.Overflow, error.InvalidCharacter => {
+                        try stdout.print("Syntax error. Could not parse statement: '{s}'.\n", .{input_buf});
                     },
                 }
+                break :blk null;
             };
 
             if (maybe_statement) |statement| {
