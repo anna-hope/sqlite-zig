@@ -1,10 +1,14 @@
 const std = @import("std");
 const io = @import("io.zig");
 const parser = @import("parser.zig");
+const storage = @import("storage.zig");
 
-fn executeStatement(statement: parser.Statement) void {
+fn executeStatement(statement: parser.Statement, table: *storage.Table) !void {
     switch (statement) {
-        .insert => std.debug.print("This is where we would do an insert.\n", .{}),
+        .insert => {
+            const row_to_insert = statement.insert.row;
+            try table.insertRow(row_to_insert);
+        },
         .select => std.debug.print("This is where we would do a select.\n", .{}),
     }
 }
@@ -19,6 +23,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
 
     const allocator = gpa.allocator();
+    var table = try storage.Table.init();
 
     while (true) {
         try io.printPrompt();
@@ -51,7 +56,7 @@ pub fn main() !void {
             };
 
             if (maybe_statement) |statement| {
-                executeStatement(statement);
+                try executeStatement(statement, &table);
                 try stdout.print("Executed.\n", .{});
             }
 

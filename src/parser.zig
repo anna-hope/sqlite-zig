@@ -1,8 +1,7 @@
 const std = @import("std");
-const Allocator = std.mem.Allocator;
+const storage = @import("storage.zig");
 
-const username_size = 32;
-const email_size = 255;
+const Allocator = std.mem.Allocator;
 
 pub const MetaCommandError = error{
     Unrecognized,
@@ -12,14 +11,8 @@ pub fn processMetaCommand(_: []u8) MetaCommandError!void {
     return error.Unrecognized;
 }
 
-pub const Row = struct {
-    id: u32,
-    username: [username_size]u8,
-    email: [email_size]u8,
-};
-
 pub const InsertStement = struct {
-    row: Row,
+    row: storage.Row,
 };
 
 pub const StatementTypeTag = enum {
@@ -65,21 +58,21 @@ pub const Statement = union(StatementTypeTag) {
                 return StatementParseError.Syntax;
             };
 
-            var username: [username_size]u8 = undefined;
+            var username: storage.username_alias = undefined;
             if (tokens.next()) |username_buf| {
                 std.mem.copyBackwards(u8, &username, username_buf);
             } else {
                 return error.Syntax;
             }
 
-            var email: [email_size]u8 = undefined;
+            var email: storage.email_alias = undefined;
             if (tokens.next()) |email_buf| {
                 std.mem.copyBackwards(u8, &email, email_buf);
             } else {
                 return error.Syntax;
             }
 
-            const insert = InsertStement{ .row = Row{ .id = row_id, .username = username, .email = email } };
+            const insert = InsertStement{ .row = storage.Row{ .id = row_id, .username = username, .email = email } };
 
             return Self{ .insert = insert };
         } else if (std.mem.startsWith(u8, buf, "select")) {
