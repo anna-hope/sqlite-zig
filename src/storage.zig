@@ -55,7 +55,7 @@ pub const PagesRowsIterator = struct {
         // Do we still have rows left in this page?
         if (self.row_index + 1 < page.rows.len) {
             self.row_index += 1;
-        } else if (self.row_index + 1 == page.rows.len and self.page_index + 1 < self.pages.len) {
+        } else if (self.page_index + 1 < self.pages.len) {
             // Check if we need to move on to the next page
             // This happens if the row index reached the maximum number of rows in this page
             // but we have more pages left
@@ -72,23 +72,26 @@ pub const PagesRowsIterator = struct {
 pub const Table = struct {
     const Self = @This();
     pages: std.BoundedArray(Page, table_max_pages),
-    current_page: *Page,
+    page_index: usize = 0,
 
     pub fn init() !Self {
-        var pages = try std.BoundedArray(Page, table_max_pages).init(0);
-        const current_page = try pages.addOne();
-        return Self{ .pages = pages, .current_page = current_page };
+        const pages = try std.BoundedArray(Page, table_max_pages).init(1);
+        return Self{ .pages = pages };
     }
 
     pub fn insertRow(self: *Self, row: Row) !void {
-        if (self.current_page.size() == self.current_page.rows.capacity()) {
-            self.current_page = try self.pages.addOne();
+        if (self.pages.get(self.page_index).size() == self.pages.get(self.page_index).rows.capacity()) {
+            _ = try self.pages.addOne();
+            self.page_index += 1;
         }
 
-        try self.current_page.rows.append(row);
+        var current_page = self.pages.get(self.page_index);
+
+        try current_page.rows.append(row);
+        self.pages.set(self.page_index, current_page);
     }
 
     pub fn allRows(self: Self) PagesRowsIterator {
-        return PagesRowsIterator{ .pages = self.pages.slice() };
+        return PagesRowsIterator{ .pages = self.pages.constSlice() };
     }
 };

@@ -90,13 +90,16 @@ test "add a record to table" {
 
     const statement = try parser.Statement.parse(buf);
     try executeStatement(statement, &table);
+
     try std.testing.expectEqual(1, table.pages.len);
-    const rows = table.current_page.rows;
+    const rows = table.pages.get(table.page_index).rows;
     try std.testing.expectEqual(1, rows.len);
 
-    try std.testing.expectEqual(1, rows.get(0).id);
+    var rows_iterator = table.allRows();
+    const row = rows_iterator.next().?;
+    try std.testing.expectEqual(1, row.id);
 
     // Have to use expectStringStartsWith instead of expectEqualStrings because the buffers have different size
-    try std.testing.expectStringStartsWith(&rows.get(0).username, "anna");
-    try std.testing.expectStringStartsWith(&rows.get(0).email, "anna@anna.anna");
+    try std.testing.expectStringStartsWith(&row.username, "anna");
+    try std.testing.expectStringStartsWith(&row.email, "anna@anna.anna");
 }
