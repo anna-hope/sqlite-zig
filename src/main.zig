@@ -9,7 +9,19 @@ fn executeStatement(statement: parser.Statement, table: *storage.Table) !void {
             const row_to_insert = statement.insert.row;
             try table.insertRow(row_to_insert);
         },
-        .select => std.debug.print("This is where we would do a select.\n", .{}),
+        .select => {
+            const stdout_file = std.io.getStdOut().writer();
+            var bw = std.io.bufferedWriter(stdout_file);
+            const stdout = bw.writer();
+
+            var row_iter = table.allRows();
+            while (row_iter.next()) |row| {
+                try stdout.print("{d} {s} {s}\n", .{ row.id, row.username, row.email });
+                try bw.flush();
+            }
+
+            try bw.flush();
+        },
     }
 }
 
