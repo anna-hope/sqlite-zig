@@ -1,9 +1,10 @@
 const std = @import("std");
 
-const max_pages_table = 100;
+const page_size = 4096;
+const table_max_pages = 100;
 
-// TODO: this isn't really the way to do this
-const max_rows_per_page = 30;
+const rows_per_page = page_size / @sizeOf(Row);
+const table_max_rows = rows_per_page * table_max_pages;
 
 const username_size = 32;
 const email_size = 255;
@@ -19,10 +20,10 @@ pub const Row = struct {
 
 const Page = struct {
     const Self = @This();
-    rows: std.BoundedArray(Row, max_rows_per_page),
+    rows: std.BoundedArray(Row, rows_per_page),
 
     fn init() !Page {
-        return Page{ .rows = try std.BoundedArray(Row, max_rows_per_page).init(0) };
+        return Page{ .rows = try std.BoundedArray(Row, rows_per_page).init(0) };
     }
 
     fn size(self: Self) usize {
@@ -32,11 +33,11 @@ const Page = struct {
 
 pub const Table = struct {
     const Self = @This();
-    pages: std.BoundedArray(Page, max_pages_table),
+    pages: std.BoundedArray(Page, table_max_pages),
     current_page: *Page,
 
     pub fn init() !Self {
-        var pages = try std.BoundedArray(Page, max_pages_table).init(0);
+        var pages = try std.BoundedArray(Page, table_max_pages).init(0);
         const current_page = try pages.addOne();
         return Self{ .pages = pages, .current_page = current_page };
     }
