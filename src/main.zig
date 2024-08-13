@@ -67,9 +67,24 @@ pub fn main() !void {
     try bw.flush(); // don't forget to flush!
 }
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
+test "add a record to table" {
+    var table = try storage.Table.init();
+
+    const allocator = std.testing.allocator;
+    const buf = try allocator.alloc(u8, 100);
+    defer allocator.free(buf);
+
+    std.mem.copyForwards(u8, buf, "insert 1 anna anna@anna.anna");
+
+    const statement = try parser.Statement.parse(buf);
+    try executeStatement(statement, &table);
+    try std.testing.expectEqual(1, table.pages.len);
+    const rows = table.current_page.rows;
+    try std.testing.expectEqual(1, rows.len);
+
+    try std.testing.expectEqual(1, rows.get(0).id);
+
+    // Have to use expectStringStartsWith instead of expectEqualStrings because the buffers have different size
+    try std.testing.expectStringStartsWith(&rows.get(0).username, "anna");
+    try std.testing.expectStringStartsWith(&rows.get(0).email, "anna@anna.anna");
 }
